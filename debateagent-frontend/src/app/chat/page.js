@@ -101,7 +101,7 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/debate', {
+      const response = await fetch('https://debateagent-production.up.railway.app/api/debate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic }),
