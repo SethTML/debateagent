@@ -12,6 +12,17 @@ export default function Home() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   useEffect(() => {
     const savedSessions = localStorage.getItem('airgue_sessions');
@@ -75,10 +86,10 @@ export default function Home() {
       createNewChat();
     }
   };
+
   const handleVote = (winner) => {
     setMessages((prev) => {
       const newMessages = [...prev];
-      
       const lastMsg = newMessages[newMessages.length - 1];
       if (lastMsg.isVotePrompt) {
         lastMsg.isVotePrompt = false; 
@@ -134,13 +145,24 @@ export default function Home() {
     }
   };
 
+  if (isMobile) {
+    return (
+      <div className="mobile-lockout">
+        <div className="mobile-lockout-content">
+          <h1>🖥️ Desktop Required</h1>
+          <p>Please switch to a desktop or laptop to use Airgue.</p>
+          <div className="mobile-lockout-url">debateagent-production.up.railway.app</div>
+        </div>
+      </div>
+    );
+  }
+
   const isVotingTime = messages.length > 0 && messages[messages.length - 1].isVotePrompt;
 
   return (
     <div className='chat'>
       <div className='chat-sidebar'>
         <div className='chat-sidebar-menu'>
-          
           <Link href="/" className='chat-sidebar-menu-title'>AIRGUE</Link>
           <div className='chat-sidebar-menu-search'>
             <input className='chat-sidebar-menu-search-input' placeholder='Search.....' />
@@ -189,8 +211,6 @@ export default function Home() {
                   className={bubbleClass} 
                   style={{ display: 'flex', flexDirection: 'column' }} 
                 >
-                  
-                  {/* HEADER ROW */}
                   {(msg.role === 'gpt' || msg.role === 'gemini') && msg.round && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontWeight: 'bold' }}>
                       {msg.role === 'gpt' && <img src="/GPTLogo.png" alt="GPT Logo" style={{ width: '24px', height: '24px', borderRadius: '4px' }} />}
@@ -199,12 +219,10 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* MESSAGE BODY */}
                   <div style={{ whiteSpace: 'pre-wrap' }}>
                     {msg.content}
                   </div>
 
-                  {/* VOTING BUTTONS */}
                   {msg.isVotePrompt && (
                     <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                       <button 
@@ -221,11 +239,10 @@ export default function Home() {
                       </button>
                     </div>
                   )}
-                  
                 </div>
               );
             })}
-            {isLoading && <div className='chat-content-text-message-textitem'>The AI models are battling (This takes a few seconds)...</div>}
+            {isLoading && <div className='chat-content-text-message-textitem'>The AI models are Discussing (This takes a few seconds)...</div>}
           </div>
 
           <input 

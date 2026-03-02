@@ -41,6 +41,7 @@ body{
   font-family: 'Schibsted Grotesk';
   font-size: 15px;
   color: black;
+  margin-left: auto;
 }
 
 .app-content-header-name{
@@ -99,4 +100,36 @@ body{
   text-decoration: none;
   color: white;
   margin-bottom: 50px;
+}
+
+.mobile-lockout {
+  background-color: #050505;
+  color: #fff;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.mobile-lockout-content h1 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  color: #00ff88;
+}
+
+.mobile-lockout-content p {
+  opacity: 0.8;
+  line-height: 1.6;
+}
+
+.mobile-lockout-url {
+  margin-top: 2rem;
+  font-family: monospace;
+  background: #111;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  border: 1px solid #222;
 }

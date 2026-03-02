@@ -36,7 +36,7 @@ async fn debate_handler(
 ) -> Result<Json<DebateResponse>, (StatusCode, String)> {
     
     let Json(payload) = payload.map_err(|e| (StatusCode::BAD_REQUEST, e.body_text()))?;
-    println!("✅ Arena Topic: {}", payload.topic);
+    println!("Arena Topic: {}", payload.topic);
 
     let gpt_client = OpenAiClient::new(); 
     let reqwest_client = reqwest::Client::new();
@@ -49,7 +49,7 @@ async fn debate_handler(
     let mut last_gemini_argument = String::new();
 
     for round in 1..=3 {
-        println!("🥊 Round {} starting...", round);
+        println!("Round {} starting...", round);
 
         let gpt_prompt = if round == 1 {
             format!("You are a Pro-stance debater. Topic: {}. Make your opening statement. You MUST keep your response strictly to 2 or 3 sentences.", payload.topic)
