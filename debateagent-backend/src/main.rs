@@ -50,7 +50,6 @@ async fn debate_handler(
     
     let gemini_key = env::var("GEMINI_API_KEY").map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Key Missing".to_string()))?;
     
-    // 🔴 Switched back to 2.5-flash as requested
     let gemini_url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}", gemini_key);
 
     let mut history: Vec<DebateMessage> = Vec::new();
@@ -96,7 +95,6 @@ async fn debate_handler(
 
         let json: serde_json::Value = gemini_res.json().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-        // Better Error Handling
         if let Some(error) = json.get("error") {
             let msg = error.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown API Error");
             println!("❌ Gemini API Error: {}", msg);
