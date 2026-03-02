@@ -2,103 +2,131 @@ use axum::{routing::post, Router, Json, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::env;
+use std::sync::Arc;
 use tower_http::cors::{CorsLayer, Any};
 use async_openai::{
     types::{
         ChatCompletionRequestSystemMessageArgs, 
-        ChatCompletionRequestUserMessageArgs, 
-        ChatCompletionRequestAssistantMessageArgs,
         CreateChatCompletionRequestArgs,
-        ChatCompletionRequestMessage
     },
-    Client,
+    Client as OpenAiClient, 
 };
 use dotenvy::dotenv;
 
-#[derive(Deserialize, Serialize, Debug)]
-struct ChatMessage {
-    role: String,    
-    content: String,
-}
+// 🔴 NEW: Import the Governor Rate Limiter
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
 #[derive(Deserialize, Debug)]
 struct DebateRequest {
-    messages: Vec<ChatMessage>, 
+    topic: String, 
+}
+
+#[derive(Serialize)]
+struct DebateMessage {
+    role: String,
+    content: String,
 }
 
 #[derive(Serialize)]
 struct DebateResponse {
-    reply: String,
+    history: Vec<DebateMessage>,
 }
 
 async fn debate_handler(
     payload: Result<Json<DebateRequest>, axum::extract::rejection::JsonRejection>,
 ) -> Result<Json<DebateResponse>, (StatusCode, String)> {
     
-    // This part catches JSON mismatches and prints them to your terminal
-    let Json(payload) = payload.map_err(|e| {
-        println!("❌ JSON Error: {}", e.body_text());
-        (StatusCode::BAD_REQUEST, format!("Invalid JSON: {}", e.body_text()))
-    })?;
+    let Json(payload) = payload.map_err(|e| (StatusCode::BAD_REQUEST, e.body_text()))?;
+    println!("✅ Arena Topic: {}", payload.topic);
 
-    println!("✅ Received {} messages from frontend", payload.messages.len());
+    let gpt_client = OpenAiClient::new(); 
+    let reqwest_client = reqwest::Client::new();
+    
+    let gemini_key = env::var("GEMINI_API_KEY").map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Key Missing".to_string()))?;
+    let gemini_url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}", gemini_key);
 
-    let client = Client::new();
+    let mut history: Vec<DebateMessage> = Vec::new();
+    let mut last_gpt_argument = String::new();
+    let mut last_gemini_argument = String::new();
 
-    let mut openai_messages: Vec<ChatCompletionRequestMessage> = vec![
-        ChatCompletionRequestSystemMessageArgs::default()
-            .content("You are a helpful debate assistant.")
-            .build().unwrap().into(),
-    ];
+    // THE 3-ROUND DEBATE LOOP
+    for round in 1..=3 {
+        println!("🥊 Round {} starting...", round);
 
-    for msg in payload.messages {
-        let converted: ChatCompletionRequestMessage = if msg.role == "user" {
-            ChatCompletionRequestUserMessageArgs::default().content(msg.content).build().unwrap().into()
+        // --- GPT TURN ---
+        let gpt_prompt = if round == 1 {
+            format!("You are a Pro-stance debater. Topic: {}. Make your opening statement. You MUST keep your response strictly to 2 or 3 sentences.", payload.topic)
         } else {
-            ChatCompletionRequestAssistantMessageArgs::default().content(msg.content).build().unwrap().into()
+            format!("You are a Pro-stance debater. Topic: {}. Opponent (CON) just argued: '{}'. Rebut their points fiercely. You MUST keep your response strictly to 2 or 3 sentences.", payload.topic, last_gemini_argument)
         };
-        openai_messages.push(converted);
+
+        let gpt_req = CreateChatCompletionRequestArgs::default()
+            .model("gpt-4o-mini")
+            .messages([
+                ChatCompletionRequestSystemMessageArgs::default().content(gpt_prompt).build().unwrap().into()
+            ])
+            .build().map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        let gpt_res = gpt_client.chat().create(gpt_req).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        last_gpt_argument = gpt_res.choices[0].message.content.clone().unwrap_or_default();
+        
+        history.push(DebateMessage { role: "gpt".to_string(), content: last_gpt_argument.clone() });
+
+        // --- GEMINI TURN ---
+        let gemini_prompt = format!("You are a Con-stance debater. Topic: {}. Opponent (PRO) just argued: '{}'. Rebut their points fiercely. You MUST keep your response strictly to 2 or 3 sentences.", payload.topic, last_gpt_argument);
+        
+        let gemini_body = serde_json::json!({
+            "contents": [{ "parts": [{ "text": gemini_prompt }] }]
+        });
+
+        let gemini_res = reqwest_client.post(&gemini_url)
+            .header("Content-Type", "application/json")
+            .json(&gemini_body)
+            .send().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        let json: serde_json::Value = gemini_res.json().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        if let Some(error) = json.get("error") {
+            let error_msg = error.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown Error");
+            last_gemini_argument = format!("Gemini Error: {}", error_msg);
+        } else {
+            last_gemini_argument = json["candidates"][0]["content"]["parts"][0]["text"]
+                .as_str()
+                .unwrap_or("Gemini generated an empty response.")
+                .to_string();
+        }
+
+        history.push(DebateMessage { role: "gemini".to_string(), content: last_gemini_argument.clone() });
     }
 
-    let request = CreateChatCompletionRequestArgs::default()
-        .model("gpt-4o-mini") 
-        .messages(openai_messages)
-        .build()
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let response = client.chat().create(request).await.map_err(|e| {
-        println!("❌ OpenAI Error: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
-
-    let reply = response.choices.first()
-        .and_then(|choice| choice.message.content.clone())
-        .unwrap_or_else(|| "No response".to_string());
-
-    Ok(Json(DebateResponse { reply }))
+    Ok(Json(DebateResponse { history }))
 }
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
     
-    match env::var("OPENAI_API_KEY") {
-        Ok(_) => println!("🚀 API Key found!"),
-        Err(_) => println!("⚠️ API Key MISSING from .env!"),
-    }
+    // 🔴 FIX: Wrap the config in Arc::new() instead of Box::new()
+    let governor_conf = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(1) 
+            .burst_size(2)
+            .finish()
+            .unwrap()
+    );
 
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
-
+    let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
+    
     let app = Router::new()
         .route("/api/debate", post(debate_handler))
+        // 🔴 FIX: Pass the Arc directly without Box::leak
+        .layer(GovernorLayer { config: governor_conf }) 
         .layer(cors);
-
+    
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
-    println!("Server listening on http://{}", addr);
+    println!("Arena Server running on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await.unwrap();
 }

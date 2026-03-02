@@ -1,90 +1,245 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from "next/link";
 import './chat.css'
 
 export default function Home() {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: "I'm here to assist you, let's chat." }
-  ]);
+  const defaultMessage = { role: 'assistant', content: "Enter a topic or question, and watch GPT and Gemini debate." };
+  
+  const [sessions, setSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState('');
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const savedSessions = localStorage.getItem('airgue_sessions');
+    if (savedSessions) {
+      const parsedSessions = JSON.parse(savedSessions);
+      setSessions(parsedSessions);
+      if (parsedSessions.length > 0) {
+        setCurrentSessionId(parsedSessions[0].id);
+        setMessages(parsedSessions[0].messages);
+      } else {
+        createNewChat();
+      }
+    } else {
+      createNewChat();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!currentSessionId || messages.length === 0) return;
+
+    setSessions((prevSessions) => {
+      const existingSessionIndex = prevSessions.findIndex(s => s.id === currentSessionId);
+      const updatedSessions = [...prevSessions];
+
+      const userMsg = messages.find(m => m.role === 'user');
+      const title = userMsg 
+        ? userMsg.content.replace('Topic: ', '').substring(0, 35) + '...' 
+        : 'New Debate';
+
+      const currentSessionData = { id: currentSessionId, title, messages };
+
+      if (existingSessionIndex >= 0) {
+        updatedSessions[existingSessionIndex] = currentSessionData;
+      } else {
+        updatedSessions.unshift(currentSessionData);
+      }
+
+      localStorage.setItem('airgue_sessions', JSON.stringify(updatedSessions));
+      return updatedSessions;
+    });
+  }, [messages, currentSessionId]);
+
+  const createNewChat = () => {
+    const newId = Date.now().toString(); 
+    setCurrentSessionId(newId);
+    setMessages([defaultMessage]);
+  };
+
+  const loadChat = (id) => {
+    const sessionToLoad = sessions.find(s => s.id === id);
+    if (sessionToLoad && !isLoading) {
+      setCurrentSessionId(sessionToLoad.id);
+      setMessages(sessionToLoad.messages);
+    }
+  };
+
+  const clearAllChats = () => {
+    if (confirm('Are you sure you want to delete all debate history?')) {
+      localStorage.removeItem('airgue_sessions');
+      setSessions([]);
+      createNewChat();
+    }
+  };
+  const handleVote = (winner) => {
+    setMessages((prev) => {
+      const newMessages = [...prev];
+      
+      const lastMsg = newMessages[newMessages.length - 1];
+      if (lastMsg.isVotePrompt) {
+        lastMsg.isVotePrompt = false; 
+      }
+
+      return [
+        ...newMessages,
+        { role: 'user', content: `I vote for ${winner}` },
+        { role: 'assistant', content: `🏆 You voted for: ${winner}! Enter a new topic to start the next battle.` }
+      ];
+    });
+  };
 
   const handleSendMessage = async (e) => {
     if (e.key !== 'Enter' || !input.trim() || isLoading) return;
 
-    const userMessage = { role: 'user', content: input };
-    const newHistory = [...messages, userMessage];
-    
-    setMessages(newHistory);
+    const topic = input;
+    setMessages((prev) => [...prev, { role: 'user', content: `Topic: ${topic}` }]);
     setInput('');
     setIsLoading(true);
 
     try {
       const response = await fetch('http://localhost:8080/api/debate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ messages: newHistory }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic }),
       });
 
       if (!response.ok) throw new Error('Backend failed');
 
       const data = await response.json();
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
+      const debateMessages = data.history.map((msg, index) => {
+        const roundNum = Math.floor(index / 2) + 1;
+        return {
+          role: msg.role,
+          round: roundNum,
+          content: msg.content 
+        };
+      });
+
+      setMessages((prev) => [
+        ...prev, 
+        ...debateMessages,
+        { role: 'assistant', content: "The debate is over. Who do you think won?", isVotePrompt: true }
+      ]);
+      
     } catch (error) {
       console.error("Error:", error);
-      setMessages((prev) => [...prev, { role: 'assistant', content: "Error: Could not connect to the debate engine." }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: "Error: Could not connect to the debate arena." }]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const isVotingTime = messages.length > 0 && messages[messages.length - 1].isVotePrompt;
+
   return (
     <div className='chat'>
       <div className='chat-sidebar'>
         <div className='chat-sidebar-menu'>
+          
+          <Link href="/" className='chat-sidebar-menu-title'>AIRGUE</Link>
           <div className='chat-sidebar-menu-search'>
             <input className='chat-sidebar-menu-search-input' placeholder='Search.....' />
           </div>
 
-          <div className='chat-sidebar-menu-clear' onClick={() => setMessages([{ role: 'assistant', content: "Chat cleared. How can I help?" }])}>
+          <div className='chat-sidebar-menu-clear' onClick={clearAllChats} style={{ cursor: 'pointer' }}>
             <span className='chat-sidebar-menu-clear-icon'>⟳</span>
             <span className='chat-sidebar-menu-clear-text'>Clear all chats</span>
           </div>
 
           <span className='chat-sidebar-menu-label'>HISTORY</span>
-          <div className='chat-sidebar-menu-item'><span>💡</span><span>Is it better for AI startups to be acquired early by tech giants or stay independent to innovate freely?</span></div>
-          <div className='chat-sidebar-menu-item'><span>🤖</span><span>Should companies be allowed to sell access to users’ emotions (via neural data)?</span></div>
-          <div className='chat-sidebar-menu-item'><span>🧠</span><span>Are AI startups driving human progress or accelerating societal inequality?</span></div>
-          <div className='chat-sidebar-menu-add'>+</div>
+          
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {sessions.map((session) => (
+              <div 
+                key={session.id} 
+                className='chat-sidebar-menu-item' 
+                onClick={() => loadChat(session.id)}
+                style={{ 
+                  cursor: 'pointer',
+                  backgroundColor: session.id === currentSessionId ? 'rgba(255,255,255,0.1)' : 'transparent',
+                  borderRadius: '4px'
+                }}
+              >
+                <span>💬</span>
+                <span>{session.title}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className='chat-sidebar-menu-add' onClick={createNewChat} style={{ cursor: 'pointer' }}>+</div>
         </div>
       </div>
 
       <div className='chat-content'>
         <div className='chat-content-text'>
-          <div className='chat-content-text-messages' style={{ overflowY: 'auto' }}>
-            {messages.map((msg, index) => (
-              <span 
-                key={index} 
-                className={msg.role === 'user' ? 'chat-content-text-message-textitem3' : 'chat-content-text-message-textitem'}
-              >
-                {msg.content}
-              </span>
-            ))}
-            {isLoading && <span className='chat-content-text-message-textitem'>Agent is thinking...</span>}
+          <div className='chat-content-text-messages'>
+            {messages.map((msg, index) => {
+              let bubbleClass = 'chat-content-text-message-textitem'; 
+              if (msg.role === 'user') bubbleClass = 'chat-content-text-message-textitem3';
+              if (msg.role === 'gemini') bubbleClass = 'chat-content-text-message-textitem2'; 
+
+              return (
+                <div 
+                  key={index} 
+                  className={bubbleClass} 
+                  style={{ display: 'flex', flexDirection: 'column' }} 
+                >
+                  
+                  {/* HEADER ROW */}
+                  {(msg.role === 'gpt' || msg.role === 'gemini') && msg.round && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontWeight: 'bold' }}>
+                      {msg.role === 'gpt' && <img src="/GPTLogo.png" alt="GPT Logo" style={{ width: '24px', height: '24px', borderRadius: '4px' }} />}
+                      {msg.role === 'gemini' && <img src="/GeminiLogo.png" alt="Gemini Logo" style={{ width: '24px', height: '24px', borderRadius: '4px' }} />}
+                      <span>{msg.role === 'gpt' ? 'GPT' : 'Gemini'} - Round {msg.round}:</span>
+                    </div>
+                  )}
+
+                  {/* MESSAGE BODY */}
+                  <div style={{ whiteSpace: 'pre-wrap' }}>
+                    {msg.content}
+                  </div>
+
+                  {/* VOTING BUTTONS */}
+                  {msg.isVotePrompt && (
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                      <button 
+                        onClick={() => handleVote('GPT')}
+                        style={{ padding: '8px 24px', borderRadius: '6px', border: 'none', cursor: 'pointer', backgroundColor: '#10a37f', color: 'white', fontWeight: 'bold' }}
+                      >
+                        GPT
+                      </button>
+                      <button 
+                        onClick={() => handleVote('Gemini')}
+                        style={{ padding: '8px 24px', borderRadius: '6px', border: 'none', cursor: 'pointer', backgroundColor: '#4285F4', color: 'white', fontWeight: 'bold' }}
+                      >
+                        Gemini
+                      </button>
+                    </div>
+                  )}
+                  
+                </div>
+              );
+            })}
+            {isLoading && <div className='chat-content-text-message-textitem'>The AI models are battling (This takes a few seconds)...</div>}
           </div>
 
           <input 
             className='chat-content-text-input' 
             type="text" 
-            placeholder={isLoading ? "Waiting for response..." : "Type your message here..."}
+            placeholder={
+              isLoading ? "Waiting for the debate to finish..." : 
+              isVotingTime ? "👆 Please cast your vote using the buttons above." : 
+              "Type a debate topic here..."
+            }
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleSendMessage}
-            disabled={isLoading}
+            disabled={isLoading || isVotingTime}
           />
         </div>
       </div>
