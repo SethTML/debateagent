@@ -107,6 +107,7 @@ export default function Home() {
     if (e.key !== 'Enter' || !input.trim() || isLoading) return;
 
     const topic = input;
+    const currentHistory = [...messages];
     setMessages((prev) => [...prev, { role: 'user', content: `Topic: ${topic}` }]);
     setInput('');
     setIsLoading(true);
@@ -115,13 +116,15 @@ export default function Home() {
       const response = await fetch('https://debateagent-production.up.railway.app/api/debate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic }),
+        body: JSON.stringify({ 
+          topic: topic,
+          history: currentHistory 
+        }),
       });
 
       if (!response.ok) throw new Error('Backend failed');
 
       const data = await response.json();
-
       const debateMessages = data.history.map((msg, index) => {
         const roundNum = Math.floor(index / 2) + 1;
         return {
