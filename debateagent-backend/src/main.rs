@@ -13,7 +13,6 @@ use async_openai::{
 };
 use dotenvy::dotenv;
 
-// 🔴 NEW: Import the Governor Rate Limiter
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
 #[derive(Deserialize, Debug)]
@@ -49,11 +48,9 @@ async fn debate_handler(
     let mut last_gpt_argument = String::new();
     let mut last_gemini_argument = String::new();
 
-    // THE 3-ROUND DEBATE LOOP
     for round in 1..=3 {
         println!("🥊 Round {} starting...", round);
 
-        // --- GPT TURN ---
         let gpt_prompt = if round == 1 {
             format!("You are a Pro-stance debater. Topic: {}. Make your opening statement. You MUST keep your response strictly to 2 or 3 sentences.", payload.topic)
         } else {
@@ -72,7 +69,6 @@ async fn debate_handler(
         
         history.push(DebateMessage { role: "gpt".to_string(), content: last_gpt_argument.clone() });
 
-        // --- GEMINI TURN ---
         let gemini_prompt = format!("You are a Con-stance debater. Topic: {}. Opponent (PRO) just argued: '{}'. Rebut their points fiercely. You MUST keep your response strictly to 2 or 3 sentences.", payload.topic, last_gpt_argument);
         
         let gemini_body = serde_json::json!({
@@ -106,7 +102,6 @@ async fn debate_handler(
 async fn main() {
     dotenv().ok();
     
-    // 🔴 FIX: Wrap the config in Arc::new() instead of Box::new()
     let governor_conf = Arc::new(
         GovernorConfigBuilder::default()
             .per_second(1) 
@@ -119,7 +114,6 @@ async fn main() {
     
     let app = Router::new()
         .route("/api/debate", post(debate_handler))
-        // 🔴 FIX: Pass the Arc directly without Box::leak
         .layer(GovernorLayer { config: governor_conf }) 
         .layer(cors);
     
