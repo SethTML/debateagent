@@ -1,0 +1,224 @@
+.chat{
+  width: 100%;
+  height: 100vh;
+  max-width: 1920px;
+  max-height: 1080px;
+  margin: auto;
+  display: flex;
+  background-color: rgb(12, 12, 12);
+}
+
+.chat-sidebar{
+  width: 350px;
+  height: 100%;
+  display: flex;
+  justify-content: right;
+  align-items: center;
+}
+
+.chat-sidebar-menu {
+  width: 92%;
+  height: 92%;
+  border-radius: 18px;
+  background: rgb(18,18,18);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: #cfcfcf;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.chat-sidebar-menu-search-input {
+  width: calc(100% - 24px);
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: rgb(28,28,28);
+  color: white;
+  outline: none;
+  font-size: 14px;
+}
+
+.chat-sidebar-menu-search-input::placeholder {
+  color: #666;
+}
+
+.chat-sidebar-menu-clear {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgb(26,26,26);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.chat-sidebar-menu-clear:hover {
+  background: rgb(35,35,35);
+}
+
+.chat-sidebar-menu-clear-text {
+  font-size: 14px;
+  color: #b5b5b5;
+}
+
+.chat-sidebar-menu-label {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #666;
+  margin-top: 6px;
+}
+
+.chat-sidebar-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  font-family: 'Schibsted Grotesk', sans-serif;
+  font-size: 13px;
+}
+
+.chat-sidebar-menu-item:hover {
+  background: rgb(32,32,32);
+}
+
+.chat-sidebar-menu-item-sub {
+  font-size: 13px;
+  color: #888;
+}
+
+.chat-sidebar-menu-add {
+  margin-top: auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgb(26,26,26);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 22px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.chat-sidebar-menu-add:hover {
+  background: rgb(36,36,36);
+}
+
+
+
+.chat-content{
+  flex:1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.chat-content-text{
+  width: 92%;
+  height: 92%;
+  border-radius: 15px;
+  background-color: rgb(20, 20, 20);
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.chat-content-text-input{
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 80%; width: 80%;
+  min-height: 50px; height: 50px;
+  background-color: rgb(12, 12, 12);
+  border: none;
+  border-radius: 20px;
+  outline: none;
+  color: white;
+  padding: 15px;
+  z-index: 2;
+  font-family: 'Schibsted Grotesk', sans-serif;
+}
+
+.chat-content-text-messages{
+  width: 80%;
+  padding-top: 30px;
+  height: calc(100% - 170px);
+  display: flex;
+  flex-direction: column;
+  overflow-y: scroll;
+}
+
+/* For Chrome, Safari, and Edge */
+.chat-content-text-messages::-webkit-scrollbar {
+  width: 6px; /* Very skinny */
+}
+
+.chat-content-text-messages::-webkit-scrollbar-track {
+  background: transparent; /* Makes the track invisible */
+}
+
+.chat-content-text-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1); /* Subtle white tint */
+  border-radius: 10px;
+}
+
+.chat-content-text-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2); /* Brightens on hover */
+}
+
+/* For Firefox */
+.chat-content-text-messages {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.chat-content-text-message-textitem{
+  padding: 10px;
+  height: fit-content;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  margin-right: auto;
+  background-color: rgb(12, 12, 12);
+  margin-bottom: 35px;
+  color: white;
+  font-family: 'Schibsted Grotesk', sans-serif;
+  font-size: 14px;
+}
+
+.chat-content-text-message-textitem2{
+  padding: 10px;
+  height: fit-content;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  background-color: rgb(255, 255, 255);
+  margin-bottom: 35px;
+  color: white;
+  font-family: 'Schibsted Grotesk', sans-serif;
+  font-size: 14px;
+}
+
+.chat-content-text-message-textitem3{
+  padding: 10px;
+  height: fit-content;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  background-color: rgb(25,93,200);
+  margin-bottom: 35px;
+  color: white;
+  font-family: 'Schibsted Grotesk', sans-serif;
+  font-size: 14px;
+}

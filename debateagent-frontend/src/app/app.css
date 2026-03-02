@@ -1,0 +1,101 @@
+body{
+  display: flex;
+  justify-content: center;
+}
+
+.app{
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  background: linear-gradient(to bottom, black 0%, rgb(12, 12, 12) 100%);
+  max-width: 2560px;
+}
+
+.app-content{
+  width: 90%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative
+}
+
+.app-content-header{
+  width: 100%;
+  height: 80px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+.app-content-header-buttons{
+  height: 100%;
+  width: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.app-content-header-buttons-button{
+  font-family: 'Schibsted Grotesk';
+  font-size: 15px;
+  color: white;
+}
+
+.app-content-header-name{
+  font-size: 24px;
+  font-family: 'SUSE Mono';
+  font-weight: 500;
+  color: white;
+  margin-right: auto;
+  font-style: italic;
+}
+
+.app-content-hero{
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.app-content-hero-title{
+  font-size: 48px;
+  text-align: center;
+  font-family: 'Schibsted Grotesk';
+  font-weight: 500;
+
+  background: linear-gradient(to right, #ffffff, #c5c5c5, #ffffff, #b0b0b0, #ffffff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.app-content-hero-text{
+  font-size: 16px;
+  text-align: center;
+  font-family: 'Schibsted Grotesk';
+  font-weight: 400;
+  color: white;
+  width: 50%;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.app-content-hero-button{
+  width: 110px;
+  height: 50px;
+  font-family: 'Schibsted Grotesk';
+  border-radius: 20px;
+  background: linear-gradient(to bottom, white,rgb(184, 184, 184));
+  padding-left: 5px;
+  padding-right: 5px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: black;
+}

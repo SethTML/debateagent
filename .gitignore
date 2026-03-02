@@ -1,0 +1,13 @@
+# Secrets
+.env
+.env.local
+**/.env
+
+# Backend
+debateagent-backend/target/
+debug/
+
+# Frontend
+node_modules/
+.next/
+out/
